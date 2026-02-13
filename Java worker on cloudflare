@@ -1,0 +1,34 @@
+export default {
+  async fetch(request, env, ctx) {
+    const NHL_API = "https://api-web.nhle.com/v1/standings/now";
+    
+    try {
+      const response = await fetch(NHL_API);
+      const data = await response.json();
+      
+      // 1. Metro Division String
+      const metro = data.standings
+        .filter(t => t.divisionName === "Metropolitan")
+        .map(t => `${t.teamAbbrev.default}:${t.points}`)
+        .join("  ");
+
+      // 2. East Wild Card String (Teams 7 & 8 in the conference)
+      const eastWC = data.standings
+        .filter(t => t.conferenceName === "Eastern" && t.wildcardSequence > 0)
+        .sort((a, b) => a.wildcardSequence - b.wildcardSequence)
+        .slice(0, 2)
+        .map(t => `WC ${t.wildcardSequence}-${t.teamAbbrev.default}:${t.points}`)
+        .join("  ");
+
+      // Combine them with a big spacer
+      const finalString = `METRO: ${metro}   |   WILD CARD: ${eastWC}`;
+
+      return new Response(finalString, {
+        headers: { "content-type": "text/plain;charset=UTF-8" },
+      });
+
+    } catch (e) {
+      return new Response("Error", { status: 500 });
+    }
+  },
+};
